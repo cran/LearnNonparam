@@ -75,13 +75,13 @@ Create a new \code{PairedDifference} object.
 
 \item{\code{method}}{a character string specifying the method of ranking data in computing adjusted signed scores for tied data, must be one of \code{"with_zeros"} (default) or \code{"without_zeros"}.}
 
-\item{\code{scoring}}{a character string specifying which scoring system to use.}
+\item{\code{scoring}}{a character string specifying the scoring system.}
 
 \item{\code{alternative}}{a character string specifying the alternative hypothesis.}
 
 \item{\code{null_value}}{a number indicating the true value of the location shift.}
 
-\item{\code{n_permu}}{an integer indicating number of permutations for the permutation distribution. If set to zero (default) then all permutations are used.}
+\item{\code{n_permu}}{an integer indicating number of permutations for the permutation distribution. If set to \code{0}, all permutations will be used.}
 
 \item{\code{correct}}{a logical indicating whether to apply continuity correction in the normal approximation for the p-value when \code{scoring} is set to \code{"rank"}.}
 }

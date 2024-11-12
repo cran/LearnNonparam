@@ -80,10 +80,10 @@ private:
     {
         double total = n * size;
         if (total <= 0 || total > R_XLEN_T_MAX) {
-            stop("Too many permutations.");
+            stop("Too many permutations");
         }
 
-        _statistic_buffer = std::move(NumericVector(no_init(static_cast<R_xlen_t>(total))));
+        _statistic_buffer = NumericVector(no_init(static_cast<R_xlen_t>(total)));
 
         _buffer_i = 0;
         _buffer_size = _statistic_buffer.size();
@@ -142,8 +142,6 @@ private:
 
     void _show() const
     {
-        int percent = static_cast<int>(100 * _buffer_i / _buffer_size);
-
-        Rcout << generated_bars[percent].data();
+        Rcout << generated_bars[static_cast<int>(100 * _buffer_i / _buffer_size)].data();
     }
 };

@@ -46,13 +46,12 @@ PermuTest <- R6Class(
         #' @return The object itself (invisibly).
         plot = function(style = c("graphics", "ggplot2"), ...) {
             if (is.null(private$.raw_data)) {
-                warning("Must provide sample(s) before calling the plot method")
+                stop("Must provide sample(s) before calling the 'plot' method")
             } else if (private$.type != "permu") {
-                warning("The plot method only works if type is set to 'permu'")
+                stop("The 'plot' method only works if 'type' is set to 'permu'")
             } else if (match.arg(style) == "graphics") {
                 private$.plot(...)
-            } else {
-                requireNamespace("ggplot2")
+            } else if (requireNamespace("ggplot2", quietly = FALSE)) {
                 print(private$.autoplot(...))
             }
 
@@ -444,3 +443,35 @@ PermuTest <- R6Class(
         conf_int = function() c(private$.conf_int)
     )
 )
+
+get_data <- function(call, env) {
+    data_exprs <- as.list(call)[-1]
+    n_data <- length(data_exprs)
+
+    if (n_data == 1 && is.list(data_1 <- eval(data_exprs[[1]], envir = env))) {
+        data_exprs <- data_1
+        n_data <- length(data_1)
+    }
+
+    data_names <- names(data_exprs)
+    if (is.null(data_names)) {
+        data_names <- rep.int("", n_data)
+    }
+
+    `names<-`(lapply(
+        seq_len(n_data), function(i) {
+            if (data_names[[i]] == "") {
+                data_names[[i]] <<- paste(
+                    deparse(data_exprs[[i]], width.cutoff = 500), collapse = " "
+                )
+            }
+
+            data_i <- eval(data_exprs[[i]], envir = env)
+            if (!is.numeric(data_i)) {
+                stop("Sample ", i, " is not numeric")
+            } else if (anyNA(data_i)) {
+                stop("Sample ", i, " contains NA")
+            } else data_i
+        }
+    ), data_names)
+}

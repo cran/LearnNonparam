@@ -49,13 +49,13 @@ Create a new \code{ScoreSum} object.
 \subsection{Arguments}{
 \if{html}{\out{<div class="arguments">}}
 \describe{
-\item{\code{scoring}}{a character string specifying which scoring system to use.}
+\item{\code{scoring}}{a character string specifying the scoring system.}
 
 \item{\code{alternative}}{a character string specifying the alternative hypothesis.}
 
 \item{\code{null_value}}{a number indicating the true value of the location shift.}
 
-\item{\code{n_permu}}{an integer indicating number of permutations for the permutation distribution. If set to zero (default) then all permutations are used.}
+\item{\code{n_permu}}{an integer indicating number of permutations for the permutation distribution. If set to \code{0}, all permutations will be used.}
 }
 \if{html}{\out{</div>}}
 }
