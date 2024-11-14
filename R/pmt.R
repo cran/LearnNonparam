@@ -126,14 +126,20 @@ pmts <- function(
 #' Defining the test statistic using `R` follows a similar approach. The purpose of this design is to pre-calculate certain constants that remain invariant during permutation.
 #' 
 #' @examples
-#' x <- rnorm(100)
-#' y <- rnorm(100, 1)
+#' x <- rnorm(5)
+#' y <- rnorm(5, 1)
 #' 
 #' t <- define_pmt(
 #'     inherit = "twosample",
 #'     scoring = base::rank, # equivalent to "rank"
 #'     statistic = function(...) function(x, y) sum(x)
 #' )$test(x, y)$print()
+#' 
+#' t$scoring <- function(x) qnorm(rank(x) / (length(x) + 1)) # equivalent to "vw"
+#' t$print()
+#' 
+#' t$n_permu <- 0
+#' t$print()
 #' 
 #' \donttest{
 #' r <- define_pmt(
@@ -265,22 +271,21 @@ define_pmt <- function(
                     return(private$.scoring)
                 } else if (is.character(value)) {
                     private$.scoring <- match.arg(
-                        value, c("none", "rank", "vw", "expon")
+                        value, choices = c("none", "rank", "vw", "expon")
                     )
                 } else if (is.function(value)) {
                     private$.scoring <- "custom"
-                    assign(
-                        envir = environment(super$.calculate_score),
-                        "get_score", function(x, ...) {
-                            score <- value(x)
-                            if (
-                                is.numeric(score) && length(score) == length(x)
-                            ) score else stop("Invalid scoring system")
-                        }
-                    )
+                    get_score <- function(x, ...) {
+                        score <- value(x)
+                        if (!is.numeric(score) || length(score) != length(x)) {
+                            stop("Invalid scoring system")
+                        } else score
+                    }
                 } else {
                     stop("'scoring' must be a character string or a function")
                 }
+
+                environment(super$.calculate_score)$get_score <- get_score
 
                 if (!is.null(private$.raw_data)) {
                     private$.on_scoring_change()
