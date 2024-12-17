@@ -35,7 +35,7 @@ define_pmt(
 
 \item{inherit}{a character string specifying the type of permutation test.}
 
-\item{statistic}{definition of the test statistic. See Details.}
+\item{statistic}{definition of the test statistic. See details.}
 
 \item{rejection}{a character string specifying where the rejection region is.}
 
@@ -62,23 +62,32 @@ a test object based on the specified statistic.
 Construct test objects in a unified way.
 }
 \details{
-The test statistic can be defined using either \code{R} or \code{Rcpp}, with the \code{statistic} parameter specified as:
+The test statistic can be defined using either R or Rcpp, with the \code{statistic} parameter specified as:
 \itemize{
-\item \code{R}: a function returning a closure that returns a double.
-\item \code{Rcpp}: a character string defining a captureless lambda (since C++11) returning another lambda that captures by value, accepts parameters of the same type as const references, and returns a double.
+\item R: a function returning a closure that returns a double.
+\item Rcpp: a character string defining a captureless lambda (since C++11) returning another lambda that captures by value, accepts parameters of the same type, and returns a double.
 }
 
-When using \code{Rcpp}, the parameters for different \code{inherit} are listed as follows. Note that the parameter names are for illustration only.
-\itemize{
-\item \code{"twosample"}: \verb{(Rcpp::NumericVector sample_1, Rcpp::NumericVector sample_2)}
-\item \code{"ksample"}: \verb{(Rcpp::NumericVector combined_sample, Rcpp::IntegerVector one_based_group_index)}
-\item \code{"paired"}: \verb{(Rcpp::NumericVector sample_1, Rcpp::NumericVector sample_2)}
-\item \code{"rcbd"}: \verb{(Rcpp::NumericMatrix block_as_column_data)}
-\item \code{"association"}: \verb{(Rcpp::NumericVector sample_1, Rcpp::NumericVector sample_2)}
-\item \code{"table"}: \verb{(Rcpp::IntegerMatrix contingency_table)}
+The purpose of this design is to pre-calculate certain constants that remain invariant during permutation.
+
+When using Rcpp, the parameters for different \code{inherit} are listed as follows. Note that the names can be customized, and the types can be replaced with \code{auto} (thanks to the support for generic lambdas in C++14). See examples.\tabular{ccc}{
+   \code{inherit} \tab Parameter 1 \tab Parameter 2 \cr
+   \code{"twosample"} \tab \verb{const NumericVector& sample_1} \tab \verb{const NumericVector& sample_2} \cr
+   \code{"ksample"} \tab \verb{const NumericVector& combined_sample} \tab \verb{const IntegerVector& one_based_group_index} \cr
+   \code{"paired"} \tab \verb{const NumericVector& sample_1} \tab \verb{const NumericVector& sample_2} \cr
+   \code{"rcbd"} \tab \verb{const NumericMatrix& block_as_column_data} \tab  \cr
+   \code{"association"} \tab \verb{const NumericVector& sample_1} \tab \verb{const NumericVector& sample_2} \cr
+   \code{"table"} \tab \verb{const IntegerMatrix& contingency_table} \tab  \cr
 }
 
-Defining the test statistic using \code{R} follows a similar approach. The purpose of this design is to pre-calculate certain constants that remain invariant during permutation.
+
+When using R, the parameters should be the R equivalents of these.
+}
+\note{
+\itemize{
+\item \code{statistic} should not cause errors or return missing values.
+\item The data is permuted in-place. Therefore, modifications to the data within \code{statistic} may lead to incorrect results. Since R has copy-on-modify semantics but C++ does not, it is recommended to pass const references when using Rcpp in \code{define_pmt}, as shown in the table above.
+}
 }
 \examples{
 pmt("twosample.wilcoxon")
@@ -102,8 +111,7 @@ t$print()
 
 \donttest{
 r <- define_pmt(
-    inherit = "twosample",
-    n_permu = 1e5,
+    inherit = "twosample", n_permu = 1e5,
     statistic = function(x, y) {
         m <- length(x)
         n <- length(y)
@@ -111,17 +119,29 @@ r <- define_pmt(
     }
 )
 
+
 rcpp <- define_pmt(
-    inherit = "twosample",
-    n_permu = 1e5,
-    statistic = "[](NumericVector x, NumericVector y) {
-        R_len_t m = x.size();
-        R_len_t n = y.size();
-        return [=](const NumericVector& x, const NumericVector& y) -> double {
+    inherit = "twosample", n_permu = 1e5,
+    statistic = "[](const auto& x, const auto& y) {
+        auto m = x.length();
+        auto n = y.length();
+        return [=](const auto& x, const auto& y) {
             return sum(x) / m - sum(y) / n;
         };
     }"
 )
+
+# equivalent
+# rcpp <- define_pmt(
+#     inherit = "twosample", n_permu = 1e5,
+#     statistic = "[](const NumericVector& x, const NumericVector& y) {
+#         R_xlen_t m = x.length();
+#         R_xlen_t n = y.length();
+#         return [m, n](const NumericVector& x, const NumericVector& y) -> double {
+#             return sum(x) / m - sum(y) / n;
+#         };
+#     }"
+# )
 
 options(LearnNonparam.pmt_progress = FALSE)
 system.time(r$test(x, y))

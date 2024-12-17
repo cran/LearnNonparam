@@ -1,52 +1,52 @@
-template <typename T, typename U>
-NumericVector impl_rcbd_pmt(
+template <bool progress, typename T>
+RObject impl_rcbd_pmt(
     NumericMatrix data,
-    const U& statistic_func,
+    const T& statistic_func,
     const double n_permu)
 {
-    T bar;
+    Stat<progress> statistic_container;
 
     auto statistic_closure = statistic_func(data);
-    auto rcbd_update = [data, &statistic_closure, &bar]() {
-        return bar << statistic_closure(data);
+    auto rcbd_update = [data, &statistic_closure, &statistic_container]() {
+        return statistic_container << statistic_closure(data);
     };
 
-    bar.init_statistic(rcbd_update);
+    statistic_container.init_statistic(rcbd_update);
 
     if (!std::isnan(n_permu)) {
-        R_len_t i = 0;
-        R_len_t n_block = data.ncol();
+        R_xlen_t k = data.nrow();
 
+        auto begin = data.begin();
+        auto end = data.end();
+
+        decltype(end) it;
         if (n_permu == 0) {
-            double total = 1;
-            for (R_len_t j = 0; j < n_block; j++) {
-                std::sort(data.column(j).begin(), data.column(j).end());
-                total *= n_permutation(data.column(j));
+            double total = 1.0;
+            for (it = begin; it != end; it += k) {
+                std::sort(it, it + k);
+                total *= n_permutation(it, it + k);
             }
 
-            bar.init_statistic_permu(total);
+            statistic_container.init_statistic_permu(total);
 
-            while (i < n_block) {
-                if (i == 0) {
+            it = begin;
+            while (it != end) {
+                if (it == begin) {
                     rcbd_update();
                 }
 
-                if (next_permutation(data.column(i))) {
-                    i = 0;
-                } else {
-                    i++;
-                }
+                it = next_permutation(it, it + k) ? begin : it + k;
             }
         } else {
-            bar.init_statistic_permu(n_permu);
+            statistic_container.init_statistic_permu(n_permu);
 
             do {
-                for (i = 0; i < n_block; i++) {
-                    random_shuffle(data.column(i));
+                for (it = begin; it != end; it += k) {
+                    random_shuffle(it, it + k);
                 }
             } while (rcbd_update());
         }
     }
 
-    return bar.close();
+    return statistic_container.close();
 }

@@ -18,6 +18,9 @@ PermuTest <- R6Class(
         #' @param ... sample(s). Can be numeric vector(s) or a `data.frame` or `list` containing them.
         #' 
         #' @return The object itself (invisibly).
+        #' 
+        #' @details
+        #' A progress bar is shown by default. Use `options(LearnNonparam.pmt_progress = FALSE)` to disable it.
         test = function(...) {
             private$.raw_data <- get_data(match.call(), parent.frame())
             private$.calculate()
@@ -443,7 +446,8 @@ PermuTest <- R6Class(
 )
 
 get_data <- function(call, env) {
-    data_exprs <- as.list(call)[-1]
+    data_exprs <- as.list.default(call)[-1]
+
     n_data <- length(data_exprs)
 
     if (n_data == 1 && is.list(data_1 <- eval(data_exprs[[1]], envir = env))) {
@@ -465,11 +469,19 @@ get_data <- function(call, env) {
             }
 
             data_i <- eval(data_exprs[[i]], envir = env)
+
             if (!is.numeric(data_i)) {
                 stop("Sample ", i, " is not numeric")
-            } else if (anyNA(data_i)) {
-                stop("Sample ", i, " contains NA")
-            } else data_i
+            }
+            if (any(is_na <- is.na(data_i))) {
+                warning("Sample ", i, " contains missing values, removed")
+                data_i <- data_i[!is_na]
+            }
+            if (length(data_i) < 1) {
+                stop("Sample ", i, " does not contain enough observations")
+            }
+
+            data_i
         }
     ), data_names)
 }
