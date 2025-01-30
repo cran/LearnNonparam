@@ -44,16 +44,17 @@ AnsariBradley <- R6Class(
         .null_value = 1,
         .link = "-",
 
+        .define = function() {
+            private$.statistic_func <- function(...) function(x, y) sum(x)
+        },
+
         .calculate_score = function() {
             rank <- rank(c(private$.data$x, private$.data$y))
             ab_rank <- pmin(rank, length(rank) + 1 - rank)
 
             x_index <- seq_along(private$.data$x)
-            private$.data <- list(x = ab_rank[x_index], y = ab_rank[-x_index])
-        },
-
-        .define = function() {
-            private$.statistic_func <- function(x, y) sum(x)
+            private$.data$x <- ab_rank[x_index]
+            private$.data$y <- ab_rank[-x_index]
         },
 
         .calculate_p = function() {
@@ -69,7 +70,7 @@ AnsariBradley <- R6Class(
                 sigma2 <- if (even) {
                     (m * n * (N + 2) * (N - 2)) / (48 * (N - 1))
                 } else {
-                    (m * n * (N + 1) * (3 + N^2)) / (48 * N^2)
+                    (m * n * (N + 1) * (N^2 + 3)) / (48 * N^2)
                 }
             } else {
                 r <- rle(sort.int(c(private$.data$x, private$.data$y)))

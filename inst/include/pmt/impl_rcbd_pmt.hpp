@@ -6,47 +6,39 @@ RObject impl_rcbd_pmt(
 {
     Stat<progress> statistic_container;
 
-    auto statistic_closure = statistic_func(data);
-    auto rcbd_update = [data, &statistic_closure, &statistic_container]() {
+    auto rcbd_update = [&statistic_container, statistic_closure = statistic_func(data), data]() {
         return statistic_container << statistic_closure(data);
     };
 
-    statistic_container.init_statistic(rcbd_update);
-
-    if (!std::isnan(n_permu)) {
+    if (std::isnan(n_permu)) {
+        statistic_container.init(rcbd_update, 1);
+    } else {
         R_xlen_t k = data.nrow();
 
-        auto begin = data.begin();
-        auto end = data.end();
-
-        decltype(end) it;
         if (n_permu == 0) {
-            double total = 1.0;
-            for (it = begin; it != end; it += k) {
+            double n_permu_ = 1.0;
+            for (auto it = data.begin(); it != data.end(); it += k) {
                 std::sort(it, it + k);
-                total *= n_permutation(it, it + k);
+                n_permu_ *= n_permutation(it, it + k);
             }
 
-            statistic_container.init_statistic_permu(total);
+            statistic_container.init(rcbd_update, 1, n_permu_);
 
-            it = begin;
-            while (it != end) {
-                if (it == begin) {
+            for (auto it = data.begin(); it != data.end(); it = next_permutation(it, it + k) ? data.begin() : it + k) {
+                if (it == data.begin()) {
                     rcbd_update();
                 }
-
-                it = next_permutation(it, it + k) ? begin : it + k;
             }
         } else {
-            statistic_container.init_statistic_permu(n_permu);
+            statistic_container.init(rcbd_update, 1, n_permu);
 
             do {
-                for (it = begin; it != end; it += k) {
+                for (auto it = data.begin(); it != data.end(); it += k) {
                     random_shuffle(it, it + k);
                 }
             } while (rcbd_update());
         }
     }
 
-    return statistic_container.close();
+    return static_cast<RObject>(statistic_container);
 }

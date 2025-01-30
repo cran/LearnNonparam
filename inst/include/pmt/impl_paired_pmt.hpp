@@ -7,42 +7,40 @@ RObject impl_paired_pmt(
 {
     Stat<progress> statistic_container;
 
-    auto statistic_closure = statistic_func(x, y);
-    auto paired_update = [x, y, &statistic_closure, &statistic_container]() {
+    auto paired_update = [&statistic_container, statistic_closure = statistic_func(x, y), x, y]() {
         return statistic_container << statistic_closure(x, y);
     };
 
-    statistic_container.init_statistic(paired_update);
-
-    if (!std::isnan(n_permu)) {
+    if (std::isnan(n_permu)) {
+        statistic_container.init(paired_update, 1);
+    } else {
         R_xlen_t n = x.size();
 
-        R_xlen_t i;
+        for (R_xlen_t i = 0; i < n; i++) {
+            if (x[i] == y[i]) {
+                while (--n > i && x[n] == y[n]) { }
+                std::swap(x[i], x[n]);
+                std::swap(y[i], y[n]);
+            }
+        }
+
         if (n_permu == 0) {
-            statistic_container.init_statistic_permu(1 << n);
+            statistic_container.init(paired_update, 1, 1 << n);
 
-            IntegerVector swapped(n, 0);
-
-            i = 0;
-            while (i < n) {
+            R_xlen_t swapped = 0;
+            for (R_xlen_t i = 0; i < n; i = swapped & (1 << i) ? 0 : i + 1) {
                 if (i == 0) {
                     paired_update();
                 }
 
                 std::swap(x[i], y[i]);
-                swapped[i]++;
-
-                if (swapped[i] < 2) {
-                    i = 0;
-                } else {
-                    swapped[i++] = 0;
-                }
+                swapped ^= (1 << i);
             }
         } else {
-            statistic_container.init_statistic_permu(n_permu);
+            statistic_container.init(paired_update, 1, n_permu);
 
             do {
-                for (i = 0; i < n; i++) {
+                for (R_xlen_t i = 0; i < n; i++) {
                     if (rand_int(2) == 1) {
                         std::swap(x[i], y[i]);
                     }
@@ -51,5 +49,5 @@ RObject impl_paired_pmt(
         }
     }
 
-    return statistic_container.close();
+    return static_cast<RObject>(statistic_container);
 }

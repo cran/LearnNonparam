@@ -29,7 +29,7 @@
 #' @export
 #' 
 #' @importFrom R6 R6Class
-#' @importFrom stats pnorm
+#' @importFrom stats pt pnorm sd
 
 
 Correlation <- R6Class(
@@ -60,6 +60,19 @@ Correlation <- R6Class(
 
         .null_value = 0,
 
+        .standardize = function() {
+            private$.data$x <- standardize(private$.data$x)
+            private$.data$y <- standardize(private$.data$y)
+        },
+
+        .calculate_score = function() {
+            super$.calculate_score()
+
+            if (private$.method == "spearman") {
+                private$.standardize()
+            }
+        },
+
         .define = function() {
             private$.param_name <- switch(private$.method,
                 pearson = "correlation", kendall = "tau", spearman = "rho"
@@ -67,37 +80,37 @@ Correlation <- R6Class(
 
             if (private$.method != "pearson") {
                 private$.scoring <- "rank"
-                private$.calculate_score()
             } else {
                 private$.scoring <- "none"
+                private$.standardize()
             }
 
-            if (private$.method != "kendall") {
-                private$.statistic_func <- switch(private$.type,
-                    permu = function(x, y) sum(x * y),
-                    asymp = function(x, y) cor(x, y, method = private$.method)
-                )
-            } else {
-                n <- nrow(private$.data)
+            private$.statistic_func <- function(x, y) {
+                n <- length(x)
 
-                sorted <- sort.int(private$.data$x, index.return = TRUE)
+                if (private$.method != "kendall") {
+                    function(x, y) sum(x * y) / (n - 1)
+                } else {
+                    I <- unlist(lapply(seq_len(n - 1), seq_len), FALSE, FALSE)
+                    J <- rep.int(seq_len(n)[-1], seq_len(n - 1))
 
-                i_index <- unlist(lapply(seq_len(n - 1), seq_len), FALSE, FALSE)
-                j_index <- rep.int(seq_len(n)[-1], seq_len(n - 1))
+                    sorted <- sort.int(x, index.return = TRUE)
 
-                x_equal <- (sorted$x[i_index] == sorted$x[j_index])
+                    x_equal <- (sorted$x[I] == sorted$x[J])
 
-                i_index <- sorted$ix[i_index]
-                j_index <- sorted$ix[j_index]
+                    I <- sorted$ix[I]
+                    J <- sorted$ix[J]
 
-                frac_2_length <- 4 / (n * (n - 1))
-                private$.statistic_func <- function(x, y) {
-                    y_i <- y[i_index]
-                    y_j <- y[j_index]
+                    N <- length(I)
 
-                    frac_2_length * sum(
-                        `[<-`(y_i < y_j, x_equal | y_i == y_j, 0.5)
-                    ) - 1
+                    function(x, y) {
+                        y_i <- y[I]
+                        y_j <- y[J]
+
+                        2 / N * sum(
+                            `[<-`(y_i < y_j, x_equal | y_i == y_j, 0.5)
+                        ) - 1
+                    }
                 }
             }
         },
@@ -106,7 +119,11 @@ Correlation <- R6Class(
             n <- nrow(private$.data)
             r <- private$.statistic
 
-            if (private$.method == "kendall") {
+            private$.p_value <- if (private$.method != "kendall") {
+                t <- sqrt((n - 2) / (1 - r^2)) * r
+
+                get_p_continous(t, "t", private$.side, df = n - 2)
+            } else {
                 s <- tabulate(private$.data$x)
                 t <- tabulate(private$.data$y)
                 a <- `+`(
@@ -122,15 +139,15 @@ Correlation <- R6Class(
                     sum(t * (t - 1))
                 ) / (2 * n * (n - 1))
 
-                z <- r / sqrt(
-                    (4 * n + 10) / (9 * n * (n - 1)) -
-                        4 / (n^2 * (n - 1)^2) * (a - b - c)
-                )
-            } else {
-                z <- r * sqrt(n - 1)
-            }
+                z <- r / sqrt(`-`(
+                    2 * (2 * n + 5) / (9 * n * (n - 1)),
+                    4 / (n^2 * (n - 1)^2) * (a - b - c)
+                ))
 
-            private$.p_value <- get_p_continous(z, "norm", private$.side)
+                get_p_continous(z, "norm", private$.side)
+            }
         }
     )
 )
+
+standardize <- function(v) (v - mean(v)) / sd(v)

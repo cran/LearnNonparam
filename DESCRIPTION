@@ -1,6 +1,6 @@
 Package: LearnNonparam
 Title: 'R6'-Based Flexible Framework for Permutation Tests
-Version: 1.2.6
+Version: 1.2.7
 Authors@R: 
     person(given = "Yan", family = "Du", role = c("aut", "cre"), email = "isduyan@outlook.com", comment = c(ORCID = "0009-0009-1169-921X"))
 Description: Implements non-parametric tests from Higgins (2004, ISBN:0534387756), including tests for one sample, two samples, k samples, paired comparisons, blocked designs, trends and association. Built with 'Rcpp' for efficiency and 'R6' for flexible, object-oriented design, the package provides a unified framework for performing or creating custom permutation tests.
@@ -16,8 +16,8 @@ Encoding: UTF-8
 LazyData: true
 RoxygenNote: 7.3.2
 NeedsCompilation: yes
-Packaged: 2024-12-17 20:50:02 UTC; dy
+Packaged: 2025-01-30 07:13:49 UTC; dy
 Author: Yan Du [aut, cre] (<https://orcid.org/0009-0009-1169-921X>)
 Maintainer: Yan Du <isduyan@outlook.com>
 Repository: CRAN
-Date/Publication: 2024-12-17 21:10:02 UTC
+Date/Publication: 2025-01-30 07:30:02 UTC

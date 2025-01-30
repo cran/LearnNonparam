@@ -39,20 +39,14 @@ RatioMeanDeviance <- R6Class(
 
         .null_value = 1,
 
-        .preprocess = function() {
-            super$.preprocess()
-
-            private$.data <- list(
-                x = abs(private$.data$x - median(private$.data$x)),
-                y = abs(private$.data$y - median(private$.data$y))
-            )
-        },
-
         .define = function() {
-            yx_length_ratio <- length(private$.data$y) / length(private$.data$x)
+            private$.data$x <- abs(private$.data$x - median(private$.data$x))
+            private$.data$y <- abs(private$.data$y - median(private$.data$y))
 
             private$.statistic_func <- function(x, y) {
-                sum(x) / sum(y) * yx_length_ratio
+                length <- length(x) / length(y)
+
+                function(x, y) sum(x) / sum(y) / length
             }
         },
 
