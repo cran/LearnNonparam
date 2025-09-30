@@ -27,7 +27,7 @@
 #' @export
 #' 
 #' @importFrom R6 R6Class
-#' @importFrom stats pt ptukey
+#' @importFrom stats pt ptukey sd
 
 
 Studentized <- R6Class(
@@ -59,33 +59,31 @@ Studentized <- R6Class(
         .name = "Multiple Comparison Based on Studentized Statistic",
 
         .define = function() {
-            inv_lengths <- 1 / tabulate(attr(private$.data, "group"))
-            sum_inv_lengths <- outer(inv_lengths, inv_lengths, `+`)
+            private$.statistic_func <- function(data, group) {
+                inv_lengths <- 1 / tabulate(group)
 
-            if (private$.scoring == "none") {
-                N <- length(private$.data)
-                k <- attr(private$.data, "group")[N]
+                weights <- 1 / sqrt(outer(inv_lengths, inv_lengths, `+`))
 
-                private$.statistic_func <- function(data, group) {
-                    means <- rowsum.default(data, group) * inv_lengths
-                    mse <- sum((data - means[group])^2) / (N - k)
+                if (private$.scoring == "none") {
+                    N <- length(data)
+                    k <- group[N]
 
-                    function(i, j) {
-                        (means[i] - means[j]) / sqrt(
-                            mse * sum_inv_lengths[i, j]
+                    function(data, group) {
+                        means <- rowsum.default(data, group) * inv_lengths
+
+                        weights_ <- weights / sqrt(
+                            sum((data - means[group])^2) / (N - k)
                         )
+
+                        function(i, j) (means[i] - means[j]) * weights_[i, j]
                     }
-                }
-            } else {
-                var <- var(private$.data)
+                } else {
+                    weights <- weights / sd(data)
 
-                private$.statistic_func <- function(data, group) {
-                    means <- rowsum.default(data, group) * inv_lengths
+                    function(data, group) {
+                        means <- rowsum.default(data, group) * inv_lengths
 
-                    function(i, j) {
-                        (means[i] - means[j]) / sqrt(
-                            var * sum_inv_lengths[i, j]
-                        )
+                        function(i, j) (means[i] - means[j]) * weights[i, j]
                     }
                 }
             }

@@ -20,7 +20,7 @@ CDF <- R6Class(
     public = list(
         #' @description Create a new `CDF` object.
         #' 
-        #' @param method a character string specifying whether to use a confidence band based on the binomial distribution or the Dvoretzky–Kiefer–Wolfowitz inequality.
+        #' @param method a character string specifying whether to use a confidence band based on the binomial distribution or the Dvoretzky-Kiefer-Wolfowitz inequality.
         #' @param conf_level a number specifying confidence level of the confidence bounds.
         #' 
         #' @return A `CDF` object.
@@ -41,7 +41,7 @@ CDF <- R6Class(
                 stop("Must provide a sample before calling the 'plot' method")
             } else if (match.arg(style) == "graphics") {
                 private$.plot()
-            } else if (requireNamespace("ggplot2", quietly = FALSE)) {
+            } else if (requireNamespace("ggplot2")) {
                 print(private$.autoplot())
             }
 
@@ -63,7 +63,6 @@ CDF <- R6Class(
             )
         },
 
-        .compile = function() NULL,
         .calculate_statistic = function() NULL,
         .calculate_side = function() NULL,
         .calculate_p = function() NULL,

@@ -5,7 +5,6 @@
 #' @aliases class.multcomp
 #' 
 #' @importFrom R6 R6Class
-#' @importFrom compiler cmpfun
 #' @importFrom graphics par layout mtext hist.default abline
 
 
@@ -27,14 +26,8 @@ MultipleComparison <- R6Class(
             )
         },
 
-        .compile = function() {
-            private$.statistic_func <- cmpfun(private$.statistic_func)
-        },
-
         .calculate_statistic = function() {
             private$.statistic <- multcomp_pmt(
-                private$.group_ij$i,
-                private$.group_ij$j,
                 private$.data,
                 attr(private$.data, "group"),
                 private$.statistic_func,
@@ -50,19 +43,16 @@ MultipleComparison <- R6Class(
         },
 
         .calculate_p_permu = function() {
-            statistic_permu <- attr(private$.statistic, "permu")
+            statistic_permu <- attr(statistic <- private$.statistic, "permu")
+
             m <- nrow(statistic_permu)
             n <- ncol(statistic_permu)
-
+            tol <- sqrt(.Machine$double.eps)
             delayedAssign(
-                "l", .rowMeans(
-                    statistic_permu <= private$.statistic, m, n
-                )
+                "l", .rowMeans(statistic_permu <= statistic + tol, m, n)
             )
             delayedAssign(
-                "r", .rowMeans(
-                    statistic_permu >= private$.statistic, m, n
-                )
+                "r", .rowMeans(statistic_permu >= statistic - tol, m, n)
             )
             delayedAssign(
                 "lr", 2 * pmin(l, r, 0.5)

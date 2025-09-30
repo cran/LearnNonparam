@@ -9,8 +9,8 @@ ksample_pmt <- function(data, group, statistic_func, n_permu, progress) {
     .Call(`_LearnNonparam_ksample_pmt`, data, group, statistic_func, n_permu, progress)
 }
 
-multcomp_pmt <- function(group_i, group_j, data, group, statistic_func, n_permu, progress) {
-    .Call(`_LearnNonparam_multcomp_pmt`, group_i, group_j, data, group, statistic_func, n_permu, progress)
+multcomp_pmt <- function(data, group, statistic_func, n_permu, progress) {
+    .Call(`_LearnNonparam_multcomp_pmt`, data, group, statistic_func, n_permu, progress)
 }
 
 paired_pmt <- function(x, y, statistic_func, n_permu, progress) {
@@ -25,7 +25,11 @@ association_pmt <- function(x, y, statistic_func, n_permu, progress) {
     .Call(`_LearnNonparam_association_pmt`, x, y, statistic_func, n_permu, progress)
 }
 
-table_pmt <- function(row, col, statistic_func, n_permu, progress) {
-    .Call(`_LearnNonparam_table_pmt`, row, col, statistic_func, n_permu, progress)
+table_pmt <- function(data, statistic_func, n_permu, progress) {
+    .Call(`_LearnNonparam_table_pmt`, data, statistic_func, n_permu, progress)
+}
+
+distribution_pmt <- function(x, y, statistic_func, n_permu, progress) {
+    .Call(`_LearnNonparam_distribution_pmt`, x, y, statistic_func, n_permu, progress)
 }
 

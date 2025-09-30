@@ -22,7 +22,50 @@ PermuTest <- R6Class(
         #' @details
         #' A progress bar is shown by default. Use `options(LearnNonparam.pmt_progress = FALSE)` to disable it.
         test = function(...) {
-            private$.raw_data <- get_data(match.call(), parent.frame())
+            env <- parent.frame()
+
+            exprs <- as.list.default(match.call())[-1]
+
+            n <- length(exprs)
+
+            if (n == 1 && is.list(data_1 <- eval(exprs[[1]], envir = env))) {
+                exprs <- data_1
+                n <- length(data_1)
+            }
+
+            data_names <- names(exprs)
+            if (is.null(data_names)) {
+                data_names <- rep.int("", n)
+            }
+
+            private$.raw_data <- `names<-`(lapply(
+                seq_len(n), function(i) {
+                    if (data_names[[i]] == "") {
+                        data_names[[i]] <<- paste(
+                            deparse(exprs[[i]]), collapse = " "
+                        )
+                        name_i <- paste0("Sample ", i)
+                    } else {
+                        name_i <- paste0("`", data_names[[i]], "`")
+                    }
+
+                    data_i <- eval(exprs[[i]], envir = env)
+
+                    if (!is.numeric(data_i)) {
+                        stop(name_i, " is not numeric")
+                    }
+                    if (length(data_i) < 1) {
+                        stop(name_i, " does not contain enough observations")
+                    }
+                    if (any(is_na <- is.na(data_i))) {
+                        warning(name_i, " contains missing values, removing")
+                        data_i <- data_i[!is_na]
+                    }
+
+                    data_i
+                }
+            ), data_names)
+
             private$.calculate()
 
             invisible(self)
@@ -54,7 +97,7 @@ PermuTest <- R6Class(
                 stop("The 'plot' method only works if 'type' is set to 'permu'")
             } else if (match.arg(style) == "graphics") {
                 private$.plot(...)
-            } else if (requireNamespace("ggplot2", quietly = FALSE)) {
+            } else if (requireNamespace("ggplot2")) {
                 print(private$.autoplot(...))
             }
 
@@ -157,17 +200,15 @@ PermuTest <- R6Class(
         },
 
         .calculate_p_permu = function() {
-            statistic_permu <- attr(private$.statistic, "permu")
+            statistic_permu <- attr(statistic <- private$.statistic, "permu")
 
+            n <- length(statistic_permu)
+            tol <- sqrt(.Machine$double.eps)
             delayedAssign(
-                "l", sum(
-                    statistic_permu <= private$.statistic
-                ) / length(statistic_permu)
+                "l", sum(statistic_permu <= statistic + tol) / n
             )
             delayedAssign(
-                "r", sum(
-                    statistic_permu >= private$.statistic
-                ) / length(statistic_permu)
+                "r", sum(statistic_permu >= statistic - tol) / n
             )
             delayedAssign(
                 "lr", 2 * min(l, r, 0.5)
@@ -445,43 +486,4 @@ PermuTest <- R6Class(
     )
 )
 
-get_data <- function(call, env) {
-    data_exprs <- as.list.default(call)[-1]
-
-    n_data <- length(data_exprs)
-
-    if (n_data == 1 && is.list(data_1 <- eval(data_exprs[[1]], envir = env))) {
-        data_exprs <- data_1
-        n_data <- length(data_1)
-    }
-
-    data_names <- names(data_exprs)
-    if (is.null(data_names)) {
-        data_names <- rep.int("", n_data)
-    }
-
-    `names<-`(lapply(
-        seq_len(n_data), function(i) {
-            if (data_names[[i]] == "") {
-                data_names[[i]] <<- paste(
-                    deparse(data_exprs[[i]], width.cutoff = 500), collapse = " "
-                )
-            }
-
-            data_i <- eval(data_exprs[[i]], envir = env)
-
-            if (!is.numeric(data_i)) {
-                stop("Sample ", i, " is not numeric")
-            }
-            if (any(is_na <- is.na(data_i))) {
-                warning("Sample ", i, " contains missing values, removed")
-                data_i <- data_i[!is_na]
-            }
-            if (length(data_i) < 1) {
-                stop("Sample ", i, " does not contain enough observations")
-            }
-
-            data_i
-        }
-    ), data_names)
-}
+autoplot.PermuTest <- function(t, ...) t$.__enclos_env__$private$.autoplot(...)
